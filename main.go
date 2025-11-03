@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -132,8 +134,27 @@ func validateCPU(contNode *yaml.Node, filename string) []string {
 			if section != nil && section.Kind == yaml.MappingNode {
 				cpuNode := findMapKey(section, "cpu")
 				if cpuNode != nil && cpuNode.Kind == yaml.ScalarNode {
-					if cpuNode.Tag != "!!int" {
-						errs = append(errs, fmt.Sprintf("%s:%d cpu must be int", filename, cpuNode.Line))
+					// Accept valid Kubernetes CPU quantities:
+					// - integer (e.g. 1, 2)
+					// - millicores as string with 'm' suffix (e.g. "500m")
+					// Also allow numeric strings without suffix (e.g. "1")
+					valid := false
+					// Native int scalar
+					if cpuNode.Tag == "!!int" {
+						if v, err := strconv.Atoi(cpuNode.Value); err == nil && v > 0 {
+							valid = true
+						}
+					} else if cpuNode.Tag == "!!str" {
+						re := regexp.MustCompile(`^[0-9]+m?$`)
+						if re.MatchString(cpuNode.Value) {
+							numStr := strings.TrimSuffix(cpuNode.Value, "m")
+							if v, err := strconv.Atoi(numStr); err == nil && v > 0 {
+								valid = true
+							}
+						}
+					}
+					if !valid {
+						errs = append(errs, fmt.Sprintf("%s:%d cpu must be a valid quantity", filename, cpuNode.Line))
 					}
 				}
 			}
