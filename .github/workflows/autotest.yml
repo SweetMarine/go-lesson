@@ -36,5 +36,3 @@ jobs:
         run: |
           devopsmastertest \
               -test.v \
-              -test.run=^TestLesson02$ \
-              -binary-path=./yamlvalidator
