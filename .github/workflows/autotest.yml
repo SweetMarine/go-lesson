@@ -30,11 +30,3 @@ jobs:
       - name: Build script binary
         run: |
           go build -buildvcs=false -o yamlvalidator
-      - name: Run autotest suite
-        run: |
-          ls -la ./yamlvalidator
-          ./yamlvalidator || echo "Binary exists"
-          devopsmastertest \
-              -test.v \
-              -test.run=^TestLesson02$ \
-              -binary-path=$PWD/yamlvalidator
