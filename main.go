@@ -57,9 +57,9 @@ func main() {
 		}
 	}
 
-	// Print errors to stderr
+	// Print validation errors to stdout so they can be captured by tests
 	for _, e := range errs {
-		fmt.Fprintln(os.Stderr, e)
+		fmt.Println(e)
 	}
 	if len(errs) > 0 {
 		os.Exit(1)
