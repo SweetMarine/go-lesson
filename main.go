@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -40,7 +41,8 @@ func main() {
 	specNode := findMapKey(mapping, "spec")
 	if specNode != nil && specNode.Kind == yaml.MappingNode {
 		// Validate spec.os
-		errs = append(errs, validateOS(specNode, filePath)...)
+		baseFile := filepath.Base(filePath)
+		errs = append(errs, validateOS(specNode, baseFile)...)
 
 		// Validate each container in spec.containers
 		conts := findMapKey(specNode, "containers")
@@ -49,10 +51,12 @@ func main() {
 				if contNode.Kind != yaml.MappingNode {
 					continue
 				}
+				// container name validation
+				errs = append(errs, validateContainerName(contNode, baseFile)...)
 				// readinessProbe.httpGet.port validation
-				errs = append(errs, validateHTTPGetPort(contNode, filePath)...)
+				errs = append(errs, validateHTTPGetPort(contNode, baseFile)...)
 				// resources.requests.cpu validation
-				errs = append(errs, validateCPU(contNode, filePath)...)
+				errs = append(errs, validateCPU(contNode, baseFile)...)
 			}
 		}
 	}
@@ -138,6 +142,20 @@ func validateCPU(contNode *yaml.Node, filename string) []string {
 				}
 			}
 		}
+	}
+	return errs
+}
+
+func validateContainerName(contNode *yaml.Node, filename string) []string {
+	var errs []string
+	nameNode := findMapKey(contNode, "name")
+	if nameNode == nil {
+		// If the key is completely missing, attach error to the container mapping line
+		errs = append(errs, fmt.Sprintf("%s:%d name is required", filename, contNode.Line))
+		return errs
+	}
+	if nameNode.Kind != yaml.ScalarNode || nameNode.Value == "" {
+		errs = append(errs, fmt.Sprintf("%s:%d name is required", filename, nameNode.Line))
 	}
 	return errs
 }
